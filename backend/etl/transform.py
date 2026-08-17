@@ -1,5 +1,6 @@
 import logging
 import pandas as pd
+from typing import Dict
 
 logging.basicConfig(
     level=logging.INFO,
@@ -7,6 +8,17 @@ logging.basicConfig(
 )
 
 class DataTransformer:
+    def _transform_single(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Transform a single symbol's DataFrame through the entire pipeline."""
+        df = self.prepare_dataframe(df)
+        df = self.calculate_daily_return(df)
+        df = self.calculate_cumulative_return(df)
+        df = self.calculate_moving_averages(df)
+        df = self.calculate_volatility(df)
+        df = self.calculate_historical_max(df)
+        df = self.calculate_drawdown(df)
+        return df
+
     def prepare_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
         df = df.copy()
 
@@ -94,30 +106,52 @@ class DataTransformer:
 
         return df
 
-    def run_pipeline(self, df: pd.DataFrame) -> pd.DataFrame:
+    def run_pipeline(self, extracted_data: Dict[str, pd.DataFrame]) -> Dict:
+        """
+        Process extracted data from multiple symbols through the transformation pipeline.
+        
+        Args:
+            extracted_data: Dictionary with symbols as keys and DataFrames as values
+            
+        Returns:
+            Dictionary with keys: 'companies', 'daily_prices', 'technical_indicators'
+        """
         logging.info("Starting transformation pipeline")
 
-        df = self.prepare_dataframe(df)
-        df = self.calculate_daily_return(df)
-        df = self.calculate_cumulative_return(df)
-        df = self.calculate_moving_averages(df)
-        df = self.calculate_volatility(df)
-        df = self.calculate_historical_max(df)
-        df = self.calculate_drawdown(df)
+        transformed_dfs = {}
+        
+        # Transform each symbol's data individually
+        for symbol, df in extracted_data.items():
+            transformed_dfs[symbol] = self._transform_single(df)
+
+        # Combine all transformed DataFrames
+        combined_df = pd.concat(transformed_dfs.values(), ignore_index=True)
+
+        # Prepare output datasets for loading
+        # Companies dataset (unique symbols)
+        companies_df = combined_df[["symbol"]].drop_duplicates().reset_index(drop=True)
+        
+        # Prices dataset
+        prices_df = combined_df[["symbol", "date", "open", "high", "low", "close", "volume"]].copy()
+        
+        # Indicators dataset (technical indicators)
+        indicators_df = combined_df[[
+            "symbol",
+            "date",
+            "daily_return",
+            "cumulative_return",
+            "ma7",
+            "ma30",
+            "volatility",
+            "historical_max",
+            "drawdown",
+            "max_drawdown"
+        ]].copy()
 
         logging.info("Transformation pipeline completed")
 
-        return df
-    
-if __name__ == "__main__":
-    from extract import AlphaVantageExtractor
-
-    extractor = AlphaVantageExtractor()
-    transformer = DataTransformer()
-
-    raw_df = extractor.get_stock_data("AAPL")
-
-    transformed_df = transformer.run_pipeline(raw_df)
-
-    print(transformed_df.tail())
-    
+        return {
+            "companies": companies_df,
+            "daily_prices": prices_df,
+            "technical_indicators": indicators_df
+        }

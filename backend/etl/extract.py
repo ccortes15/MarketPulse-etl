@@ -15,13 +15,7 @@ logging.basicConfig(
 )
 
 API_KEY = os.getenv("ALPHA_VANTAGE_API_KEY")
-BASE_URL = "https://www.alphavantage.co/query"
-
-apple_symbol = 'AAPL'
-microsoft_symbol = 'MSFT'
-nvidia_symbol = 'NVDA'
-tesla_symbol = 'TSLA'
-sandp500_symbol = 'SPY'
+BASE_URL = os.getenv("ALPHA_VANTAGE_URL")
 
 class AlphaVantageExtractor:
     def __init__(self, api_key: str = API_KEY):
@@ -98,10 +92,3 @@ class AlphaVantageExtractor:
             time.sleep(15)
 
         return result
-
-if __name__ == "__main__":
-    extractor = AlphaVantageExtractor()
-
-    df = extractor.get_stock_data(apple_symbol)
-
-    print(df.head())
