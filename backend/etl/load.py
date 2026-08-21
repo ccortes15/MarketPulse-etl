@@ -5,14 +5,9 @@ from database.connection import engine
 
 def load_companies(df: pd.DataFrame) -> int:
 
-    columns = [
-        "symbol",
-        "name",
-        "sector",
-        "industry",
-    ]
-
-    data = df[columns].to_dict(orient="records")
+    data = df[["symbol", "name", "sector", "technology"]].rename(
+        columns={"technology": "industry"}
+    ).to_dict(orient="records")
 
     if not data:
         return 0
@@ -113,7 +108,6 @@ def load_technical_indicators(df: pd.DataFrame) -> int:
             "volatility",
             "historical_max",
             "drawdown",
-            "max_drawdown",
         ]
     ].to_dict(orient="records")
 
@@ -130,8 +124,7 @@ def load_technical_indicators(df: pd.DataFrame) -> int:
             ma30,
             volatility,
             historical_max,
-            drawdown,
-            max_drawdown
+            drawdown
         )
         SELECT
             c.id,
@@ -142,8 +135,7 @@ def load_technical_indicators(df: pd.DataFrame) -> int:
             :ma30,
             :volatility,
             :historical_max,
-            :drawdown,
-            :max_drawdown
+            :drawdown
         FROM companies c
         WHERE c.symbol = :symbol
 
@@ -155,8 +147,7 @@ def load_technical_indicators(df: pd.DataFrame) -> int:
             ma30 = EXCLUDED.ma30,
             volatility = EXCLUDED.volatility,
             historical_max = EXCLUDED.historical_max,
-            drawdown = EXCLUDED.drawdown,
-            max_drawdown = EXCLUDED.max_drawdown
+            drawdown = EXCLUDED.drawdown
     """)
 
     with engine.begin() as connection:

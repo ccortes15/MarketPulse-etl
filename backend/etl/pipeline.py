@@ -5,20 +5,10 @@ from etl.extract import AlphaVantageExtractor
 from etl.transform import DataTransformer
 from etl.logger import create_log, finish_log
 from etl.load import load_data
+from database.symbols import get_symbols_data, has_daily_prices
 
 # ------------------------------------------------
-# 1.- Symbols to be processed
-# ------------------------------------------------
-apple_symbol = 'AAPL'
-microsoft_symbol = 'MSFT'
-nvidia_symbol = 'NVDA'
-tesla_symbol = 'TSLA'
-sandp500_symbol = 'SPY'
-
-symbols = [apple_symbol, microsoft_symbol, nvidia_symbol, tesla_symbol, sandp500_symbol]
-
-# ------------------------------------------------
-# 2.- Create execution metadata
+# 1. Create execution metadata
 # ------------------------------------------------
 execution_id = uuid4()
 started_at = datetime.now(timezone.utc)
@@ -27,7 +17,7 @@ pipeline_name = (
 )
 
 # ------------------------------------------------
-# 3. Create initial ETL log
+# 2. Create initial ETL log
 # ------------------------------------------------
 create_log(
     pipeline_name=pipeline_name,
@@ -41,9 +31,16 @@ try:
     # ------------------------------------------------
     # 4. Extract data
     # ------------------------------------------------
+    symbols_df = get_symbols_data()
+    symbols = symbols_df["symbol"].tolist()
+    initial_load = not has_daily_prices()
+
     ave = AlphaVantageExtractor()
 
-    extracted_data = ave.get_multiple_symbols(symbols)
+    extracted_data = ave.get_multiple_symbols(
+        symbols,
+        latest_only=not initial_load,
+    )
 
     records_extracted = sum(
         len(data)
@@ -59,7 +56,7 @@ try:
 
     transformed_data = dt.run_pipeline(extracted_data)
 
-    companies_df = transformed_data["companies"]
+    companies_df = symbols_df
     prices_df = transformed_data["daily_prices"]
     indicators_df = transformed_data["technical_indicators"]
 

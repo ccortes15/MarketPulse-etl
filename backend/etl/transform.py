@@ -31,7 +31,7 @@ class DataTransformer:
 
         df = df.dropna()
 
-        df.sort_values("date").reset_index(drop=True)
+        df = df.sort_values("date").reset_index(drop=True)
 
         return df
 
@@ -144,8 +144,7 @@ class DataTransformer:
             "ma30",
             "volatility",
             "historical_max",
-            "drawdown",
-            "max_drawdown"
+            "drawdown"
         ]].copy()
 
         logging.info("Transformation pipeline completed")

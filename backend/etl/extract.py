@@ -38,7 +38,9 @@ class AlphaVantageExtractor:
             if "Note" in data:
                 wait = 20 * (attempt + 1)
                 logging.warning(
-                    f"Rate limit reached for {symbol}. Waiting {wait}s..."
+                    "Rate limit reached for %s. Waiting %ss...",
+                    symbol,
+                    wait,
                 )
                 time.sleep(wait)
                 continue
@@ -53,7 +55,7 @@ class AlphaVantageExtractor:
         raise RuntimeError("Maximum retries reached. Unable to fetch data.")
 
     def get_stock_data(self, symbol:str) -> pd.DataFrame:
-        logging.info(f"Extracting data for {symbol}")
+        logging.info("Extracting data for %s", symbol)
 
         data = self._request(symbol)
         time_series = data["Time Series (Daily)"]
@@ -75,18 +77,20 @@ class AlphaVantageExtractor:
 
         df = pd.DataFrame(records)
 
-        logging.info(f"Extracted {len(df)} records for {symbol}")
+        logging.info("Extracted %s records for %s", len(df), symbol)
 
         return df
 
     def get_multiple_symbols(
         self,
-        symbols: List[str]
+        symbols: List[str],
+        latest_only: bool = False,
     ) -> Dict[str, pd.DataFrame]:
         result = {}
 
         for symbol in symbols:
-            result[symbol] = self.get_stock_data(symbol)
+            symbol_data = self.get_stock_data(symbol)
+            result[symbol] = symbol_data.head(1) if latest_only else symbol_data
 
             #Respect Alpha Vantage free rate limit
             time.sleep(15)
